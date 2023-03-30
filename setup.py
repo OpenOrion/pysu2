@@ -28,7 +28,7 @@ for line in lines:
         break
 
 python_version_values = platform.python_version().split('.')
-url = f"https://github.com/Turbodesigner/pysu2/releases/download/{version}-python-{python_version_values[0]}.{python_version_values[1]}-{debian_codename}-{develop}/pysu2.zip"
+url = f"https://github.com/Turbodesigner/pysu2/releases/download/{version}-python-{python_version_values[0]}.{python_version_values[1]}-{debian_codename}-develop/pysu2.zip"
 install_dir = f"{os.getcwd()}/{PACKAGE_NAME}"
 
 # Download and extract the ZIP file
