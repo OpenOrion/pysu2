@@ -1,0 +1,76 @@
+# This workflow will upload a Python Package using Twine when a release is created
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python#publishing-to-package-registries
+
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+name: Upload Python Package
+
+on: push
+
+env:
+  RELEASE_VERSION: 7.5.1
+
+permissions:
+  contents: write
+  id-token: write # This is required for requesting the JWT
+
+jobs:
+  deploy:
+    strategy:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04, ubuntu-18.04]
+        python-version: [3.7, 3.8, 3.9, 3.10, 3.11]
+        branch: ["develop"]
+    steps:
+      - name: Install dependencies
+        run: |
+          apt-get update && apt-get install -y zip git build-essential swig libopenmpi-dev openmpi-bin ccache
+          rm -rf /var/lib/apt/lists/*
+          /usr/sbin/update-ccache-symlinks
+          echo 'export PATH="/usr/lib/ccache:$PATH"' | tee -a ~/.bashrc 
+          python -m pip install numpy scipy mpi4py 
+
+      - name: Build SU2
+        run: |
+          mkdir su2_build
+          cd su2_build
+          git clone --recursive https://github.com/su2code/SU2
+          cd SU2
+          git checkout ${{ matrix.branch }}
+          ./meson.py build -Denable-pywrapper=true
+          ./ninja -C build install
+          mv build/SU2_PY/pySU2 pysu2
+          zip -r pysu2.zip pysu2
+
+      - name: Release Tag
+        run: |
+          echo "OS_TAG=$(echo "${{ matrix.os-version }}" | sed 's/:/-/g')" >> $GITHUB_ENV        
+      
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{env.RELEASE_VERSION}}-${{env.OS_TAG}}-${{ matrix.branch }}
+          release_name: Release ${{env.RELEASE_VERSION}}-${{env.OS_TAG}}-${{ matrix.branch }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        id: upload-release-asset 
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+          asset_path: su2_build/SU2/pysu2.zip
+          asset_name: pysu2.zip
+          asset_content_type: application/zip
+
+
