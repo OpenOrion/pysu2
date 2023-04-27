@@ -42,7 +42,7 @@ jobs:
           git clone --recursive https://github.com/su2code/SU2
           cd SU2
           git checkout ${{ matrix.branch }}
-          ./meson.py build -Denable-pywrapper=true -Dwith-mpi=disabled
+          ./meson.py build -Denable-pywrapper=true
           ./ninja -C build install
           mv build/SU2_PY/pySU2 pysu2
           zip -r pysu2.zip pysu2
